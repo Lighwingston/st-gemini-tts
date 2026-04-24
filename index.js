@@ -19,7 +19,7 @@ class Gemini31FlashTtsProvider {
 
     defaultSettings = {
         voiceMap: {},
-        model: 'gemini-3.1-flash-preview-tts',
+        model: 'gemini-3.1-flash-tts-preview',
         customModel: '',
         useCustomModel: false,
         apiType: 'makersuite',
@@ -39,7 +39,7 @@ class Gemini31FlashTtsProvider {
             <div>
                 <label for="gemini31-tts-model">Model:</label>
                 <select id="gemini31-tts-model">
-                    <option value="gemini-3.1-flash-tts/">Gemini 3.1 Flash Preview TTS</option>
+                    <option value="gemini-3.1-flash-tts-preview/">Gemini 3.1 Flash Preview TTS</option>
                     <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash Preview TTS</option>
                     <option value="gemini-2.5-pro-preview-tts">Gemini 2.5 Pro Preview TTS</option>
                     <option value="custom">Custom model name...</option>
@@ -48,7 +48,7 @@ class Gemini31FlashTtsProvider {
             <div id="gemini31-tts-custom-model-block" style="display:none;">
                 <label for="gemini31-tts-custom-model">Custom Model ID:</label>
                 <input type="text" class="text_pole" id="gemini31-tts-custom-model"
-                       placeholder="e.g. gemini-3.1-flash-preview-tts" />
+                       placeholder="e.g. gemini-3.1-flash-tts-preview" />
             </div>
         </div>`;
     }
