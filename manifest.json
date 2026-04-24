@@ -1,0 +1,11 @@
+{
+    "display_name": "Gemini 3.1 Flash TTS",
+    "loading_order": 99,
+    "requires": [],
+    "optional": [],
+    "dependencies": ["tts"],
+    "js": "index.js",
+    "author": "Custom",
+    "version": "1.0.0",
+    "homePage": ""
+}
