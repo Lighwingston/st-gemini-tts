@@ -4,12 +4,51 @@ import { isValidUrl } from '../../../utils.js';
 import { registerTtsProvider, getPreviewString, saveTtsProviderSettings } from '../../tts/index.js';
 
 /**
+ * Hardcoded voice options with gender from official Google documentation.
+ * Source: https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#voice_options
+ */
+const GEMINI_TTS_VOICES = [
+    { name: 'Achernar', voice_id: 'Achernar', lang: 'en-US', gender: 'Female' },
+    { name: 'Achird', voice_id: 'Achird', lang: 'en-US', gender: 'Male' },
+    { name: 'Algenib', voice_id: 'Algenib', lang: 'en-US', gender: 'Male' },
+    { name: 'Algieba', voice_id: 'Algieba', lang: 'en-US', gender: 'Male' },
+    { name: 'Alnilam', voice_id: 'Alnilam', lang: 'en-US', gender: 'Male' },
+    { name: 'Aoede', voice_id: 'Aoede', lang: 'en-US', gender: 'Female' },
+    { name: 'Autonoe', voice_id: 'Autonoe', lang: 'en-US', gender: 'Female' },
+    { name: 'Callirrhoe', voice_id: 'Callirrhoe', lang: 'en-US', gender: 'Female' },
+    { name: 'Charon', voice_id: 'Charon', lang: 'en-US', gender: 'Male' },
+    { name: 'Despina', voice_id: 'Despina', lang: 'en-US', gender: 'Female' },
+    { name: 'Enceladus', voice_id: 'Enceladus', lang: 'en-US', gender: 'Male' },
+    { name: 'Erinome', voice_id: 'Erinome', lang: 'en-US', gender: 'Female' },
+    { name: 'Fenrir', voice_id: 'Fenrir', lang: 'en-US', gender: 'Male' },
+    { name: 'Gacrux', voice_id: 'Gacrux', lang: 'en-US', gender: 'Female' },
+    { name: 'Iapetus', voice_id: 'Iapetus', lang: 'en-US', gender: 'Male' },
+    { name: 'Kore', voice_id: 'Kore', lang: 'en-US', gender: 'Female' },
+    { name: 'Laomedeia', voice_id: 'Laomedeia', lang: 'en-US', gender: 'Female' },
+    { name: 'Leda', voice_id: 'Leda', lang: 'en-US', gender: 'Female' },
+    { name: 'Orus', voice_id: 'Orus', lang: 'en-US', gender: 'Male' },
+    { name: 'Pulcherrima', voice_id: 'Pulcherrima', lang: 'en-US', gender: 'Female' },
+    { name: 'Puck', voice_id: 'Puck', lang: 'en-US', gender: 'Male' },
+    { name: 'Rasalgethi', voice_id: 'Rasalgethi', lang: 'en-US', gender: 'Male' },
+    { name: 'Sadachbia', voice_id: 'Sadachbia', lang: 'en-US', gender: 'Male' },
+    { name: 'Sadaltager', voice_id: 'Sadaltager', lang: 'en-US', gender: 'Male' },
+    { name: 'Schedar', voice_id: 'Schedar', lang: 'en-US', gender: 'Male' },
+    { name: 'Sulafat', voice_id: 'Sulafat', lang: 'en-US', gender: 'Female' },
+    { name: 'Umbriel', voice_id: 'Umbriel', lang: 'en-US', gender: 'Male' },
+    { name: 'Vindemiatrix', voice_id: 'Vindemiatrix', lang: 'en-US', gender: 'Female' },
+    { name: 'Zephyr', voice_id: 'Zephyr', lang: 'en-US', gender: 'Female' },
+    { name: 'Zubenelgenubi', voice_id: 'Zubenelgenubi', lang: 'en-US', gender: 'Male' },
+];
+
+/**
  * Gemini 3.1 Flash TTS Provider for SillyTavern.
  *
- * Adds support for Google's Gemini 3.1 Flash TTS model while reusing
- * SillyTavern's existing server-side Google TTS endpoints (which are
- * model-agnostic). The only difference from the built-in "Google Gemini TTS"
- * provider is the default model selection (3.1 flash).
+ * Adds support for Google's Gemini 3.1 Flash TTS model and other Gemini TTS
+ * models. Reuses SillyTavern's existing server-side Google TTS endpoints
+ * (which are model-agnostic).
+ *
+ * Includes voice options with gender info and voice prompt/style control
+ * as documented at: https://docs.cloud.google.com/text-to-speech/docs/gemini-tts
  */
 class Gemini31FlashTtsProvider {
     settings;
@@ -23,6 +62,7 @@ class Gemini31FlashTtsProvider {
         customModel: '',
         useCustomModel: false,
         apiType: 'makersuite',
+        voicePrompt: '',
     };
 
     get settingsHtml() {
@@ -39,9 +79,10 @@ class Gemini31FlashTtsProvider {
             <div>
                 <label for="gemini31-tts-model">Model:</label>
                 <select id="gemini31-tts-model">
-                    <option value="gemini-3.1-flash-tts-preview/">Gemini 3.1 Flash Preview TTS</option>
-                    <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash Preview TTS</option>
-                    <option value="gemini-2.5-pro-preview-tts">Gemini 2.5 Pro Preview TTS</option>
+                    <option value="gemini-3.1-flash-tts-preview">Gemini 3.1 Flash TTS (Preview)</option>
+                    <option value="gemini-2.5-flash-tts">Gemini 2.5 Flash TTS</option>
+                    <option value="gemini-2.5-pro-tts">Gemini 2.5 Pro TTS</option>
+                    <option value="gemini-2.5-flash-lite-preview-tts">Gemini 2.5 Flash Lite TTS (Preview)</option>
                     <option value="custom">Custom model name...</option>
                 </select>
             </div>
@@ -49,6 +90,14 @@ class Gemini31FlashTtsProvider {
                 <label for="gemini31-tts-custom-model">Custom Model ID:</label>
                 <input type="text" class="text_pole" id="gemini31-tts-custom-model"
                        placeholder="e.g. gemini-3.1-flash-tts-preview" />
+            </div>
+            <hr>
+            <div>
+                <label for="gemini31-tts-voice-prompt">Voice Prompt / Style (optional):</label>
+                <small>Natural language instructions for voice style, accent, tone, emotion, and pace.
+                This text is prepended to every TTS request as a style directive.</small>
+                <textarea id="gemini31-tts-voice-prompt" class="text_pole textarea_compact" rows="3"
+                          placeholder="e.g. Speak in a warm, friendly tone with a slight British accent. Read slowly and expressively."></textarea>
             </div>
         </div>`;
     }
@@ -62,6 +111,7 @@ class Gemini31FlashTtsProvider {
 
         // Populate UI from settings
         $('#gemini31-tts-api-type').val(this.settings.apiType);
+        $('#gemini31-tts-voice-prompt').val(this.settings.voicePrompt || '');
 
         if (this.settings.useCustomModel && this.settings.customModel) {
             $('#gemini31-tts-model').val('custom');
@@ -75,6 +125,7 @@ class Gemini31FlashTtsProvider {
         // Bind change handlers
         $('#gemini31-tts-api-type, #gemini31-tts-model').on('change', () => this.onSettingsChange());
         $('#gemini31-tts-custom-model').on('input', () => this.onSettingsChange());
+        $('#gemini31-tts-voice-prompt').on('input', () => this.onSettingsChange());
 
         try {
             await this.checkReady();
@@ -86,6 +137,7 @@ class Gemini31FlashTtsProvider {
 
     onSettingsChange() {
         this.settings.apiType = String($('#gemini31-tts-api-type').val());
+        this.settings.voicePrompt = String($('#gemini31-tts-voice-prompt').val());
         const selectedModel = String($('#gemini31-tts-model').val());
 
         if (selectedModel === 'custom') {
@@ -98,7 +150,7 @@ class Gemini31FlashTtsProvider {
             $('#gemini31-tts-custom-model-block').hide();
         }
 
-        this.voices = []; // Reset voices cache so it re-fetches
+        this.voices = []; // Reset voices cache
         saveTtsProviderSettings();
     }
 
@@ -141,45 +193,23 @@ class Gemini31FlashTtsProvider {
     }
 
     /**
-     * Fetch available TTS voices from the server.
-     * Uses the built-in SillyTavern endpoint which returns the 30 prebuilt
-     * Gemini TTS voices (shared across all Gemini TTS models).
+     * Returns the list of Gemini TTS voices with gender information.
+     * Uses a local hardcoded list enriched with gender data from official
+     * Google documentation, rather than relying on the server endpoint
+     * (which lacks gender info).
      */
     async fetchTtsVoiceObjects() {
-        try {
-            const response = await fetch('/api/google/list-native-voices', {
-                method: 'POST',
-                headers: getRequestHeaders(),
-                body: JSON.stringify({}),
-            });
+        // Use the hardcoded voice list with gender info included in the name
+        this.voices = GEMINI_TTS_VOICES.map(v => ({
+            name: `${v.name} (${v.gender})`,
+            voice_id: v.voice_id,
+            lang: v.lang,
+            gender: v.gender,
+            preview_url: false,
+        }));
 
-            if (!response.ok) {
-                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                try {
-                    const errorJson = await response.json();
-                    if (errorJson.error) {
-                        errorMessage = errorJson.error;
-                    }
-                } catch (parseError) {
-                    console.debug('Error response is not JSON:', parseError.message);
-                }
-                throw new Error(errorMessage);
-            }
-
-            const responseJson = await response.json();
-
-            if (!responseJson.voices || !Array.isArray(responseJson.voices)) {
-                throw new Error('Invalid response format: voices array not found');
-            }
-
-            this.voices = responseJson.voices;
-            console.info(`Gemini 3.1 TTS: Loaded ${this.voices.length} voices`);
-
-            return this.voices;
-        } catch (error) {
-            console.error('Failed to fetch Gemini 3.1 TTS voices:', error);
-            throw error;
-        }
+        console.info(`Gemini 3.1 TTS: Loaded ${this.voices.length} voices`);
+        return this.voices;
     }
 
     async previewTtsVoice(id) {
@@ -208,12 +238,30 @@ class Gemini31FlashTtsProvider {
     }
 
     /**
+     * Build the final text to send to the TTS API.
+     * If a voice prompt/style directive is set, prepend it to the text
+     * so the Gemini model applies the requested style.
+     *
+     * @param {string} text The raw text to speak
+     * @returns {string} Text with optional style prefix
+     */
+    buildTtsText(text) {
+        const prompt = (this.settings.voicePrompt || '').trim();
+        if (!prompt) {
+            return text;
+        }
+        // Prepend the style prompt as instructions before the actual text
+        return `${prompt}\n\n${text}`;
+    }
+
+    /**
      * Generate TTS audio via SillyTavern's built-in Google TTS endpoint.
-     * Passes the selected 3.1 model name — the server-side endpoint is
+     * Passes the selected model name — the server-side endpoint is
      * model-agnostic and will forward it to the Google API as-is.
      */
     async fetchTtsGeneration(text, voiceId) {
         const modelName = this.getModelName();
+        const finalText = this.buildTtsText(text);
         console.info(`Generating Gemini 3.1 TTS for voice_id ${voiceId}, model ${modelName}`);
 
         const useReverseProxy = oai_settings.reverse_proxy && isValidUrl(oai_settings.reverse_proxy);
@@ -222,7 +270,7 @@ class Gemini31FlashTtsProvider {
             method: 'POST',
             headers: getRequestHeaders(),
             body: JSON.stringify({
-                text: text,
+                text: finalText,
                 voice: voiceId,
                 model: modelName,
                 api: this.settings.apiType,
